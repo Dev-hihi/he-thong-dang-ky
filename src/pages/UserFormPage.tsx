@@ -102,9 +102,18 @@ export default function UserFormPage() {
               <input type="tel" required pattern="[0-9]*" placeholder="Ví dụ: 0901234567" className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none text-gray-900 placeholder:text-gray-400" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })} />
             </div>
 
+            {/* ĐÃ NÂNG CẤP: CHỈ CHO NHẬP SỐ */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2"><Hash size={14} className="text-blue-600" />Số lượng đăng ký</label>
-              <input type="text" required placeholder="Ví dụ: 10, 25, 45" className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none text-gray-900 placeholder:text-gray-400" value={formData.numbers} onChange={(e) => setFormData({ ...formData, numbers: e.target.value })} />
+              <input
+                type="tel"
+                pattern="[0-9]*"
+                required
+                placeholder="Ví dụ: 10, 25, 45"
+                className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none text-gray-900 placeholder:text-gray-400"
+                value={formData.numbers}
+                onChange={(e) => setFormData({ ...formData, numbers: e.target.value.replace(/\D/g, '') })}
+              />
             </div>
 
             <div className="space-y-1.5">
