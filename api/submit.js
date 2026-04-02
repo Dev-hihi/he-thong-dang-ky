@@ -52,14 +52,19 @@ export default async function handler(req, res) {
         </p>
       </div>
     `;
-
         // 5. Gửi Email
-        await resend.emails.send({
+        const { data: emailData, error: emailError } = await resend.emails.send({
             from: 'LodeApp <onboarding@resend.dev>',
             to: process.env.MY_GMAIL,
             subject: `[ĐƠN MỚI] ${data.full_name} - ${data.numbers}`,
             html: emailContent,
         });
+
+        // Nếu Resend báo lỗi ngầm, ép nó in ra Vercel Logs và báo thất bại
+        if (emailError) {
+            console.error("LỖI TỪ RESEND:", emailError);
+            throw new Error(emailError.message);
+        }
 
         return res.status(200).json({ success: true });
     } catch (error) {
