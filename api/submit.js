@@ -5,25 +5,25 @@ const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SU
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+  if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
-    const data = req.body;
+  const data = req.body;
 
-    try {
-        // 1. Lưu vào Supabase (Bây giờ data đã có thêm data.station)
-        const { error: dbError } = await supabase.from('entries').insert([data]);
-        if (dbError) throw dbError;
+  try {
+    // 1. Lưu vào Supabase (Bây giờ data đã có thêm data.station)
+    const { error: dbError } = await supabase.from('entries').insert([data]);
+    if (dbError) throw dbError;
 
-        // 2. Chuẩn bị nội dung tin nhắn Zalo/SMS (Đã thêm Đài)
-        const rawMessage = `Chao ${data.full_name}, xac nhan so: ${data.numbers} - Mien ${data.region} (${data.station}). Ghi chu: ${data.note || 'Khong'}`;
-        const encodedMessage = encodeURIComponent(rawMessage);
+    // 2. Chuẩn bị nội dung tin nhắn Zalo/SMS (Đã thêm Đài)
+    const rawMessage = `Chao ${data.full_name}, xac nhan so: ${data.numbers} - Mien ${data.region} (${data.station}). Ghi chu: ${data.note || 'Khong'}`;
+    const encodedMessage = encodeURIComponent(rawMessage);
 
-        // 3. Tạo link Zalo và SMS
-        const zaloLink = `https://zalo.me/${data.phone_zalo}`;
-        const smsLink = `sms:${data.phone_zalo}?body=${encodedMessage}`;
+    // 3. Tạo link Zalo và SMS
+    const zaloLink = `https://zalo.me/${data.phone_zalo}`;
+    const smsLink = `sms:${data.phone_zalo}?body=${encodedMessage}`;
 
-        // 4. Soạn giao diện Email với các nút bấm (Đã thêm dòng hiển thị Đài)
-        const emailContent = `
+    // 4. Soạn giao diện Email với các nút bấm (Đã thêm dòng hiển thị Đài)
+    const emailContent = `
       <div style="font-family: sans-serif; max-width: 500px; border: 1px solid #eee; padding: 20px; border-radius: 15px;">
         <h2 style="color: #2563eb; text-align: center;">🔔 ĐƠN ĐĂNG KÝ MỚI</h2>
         
@@ -34,6 +34,7 @@ export default async function handler(req, res) {
           <p><b>📍 Khu vực:</b> Miền ${data.region}</p>
           <p><b>🏢 Đài chọn:</b> <span style="color: #059669; font-weight: bold;">${data.station}</span></p>
           <p><b>📝 Ghi chú:</b> ${data.note || 'Không có'}</p>
+          <p><b>💰 Số tiền:</b> <span style="color: #ea580c; font-weight: bold;">${data.amount} VNĐ</span></p>
         </div>
 
         <div style="display: flex; gap: 10px; justify-content: center;">
@@ -43,21 +44,21 @@ export default async function handler(req, res) {
       </div>
     `;
 
-        // 5. Gửi Email
-        const { data: emailData, error: emailError } = await resend.emails.send({
-            from: 'LodeApp <onboarding@resend.dev>',
-            to: process.env.MY_GMAIL,
-            subject: `[ĐƠN MỚI] ${data.full_name} - ${data.numbers} (${data.station})`,
-            html: emailContent,
-        });
+    // 5. Gửi Email
+    const { data: emailData, error: emailError } = await resend.emails.send({
+      from: 'LodeApp <onboarding@resend.dev>',
+      to: process.env.MY_GMAIL,
+      subject: `[ĐƠN MỚI] ${data.full_name} - ${data.numbers} (${data.station})`,
+      html: emailContent,
+    });
 
-        if (emailError) {
-            console.error("LỖI TỪ RESEND:", emailError);
-            throw new Error(emailError.message);
-        }
-
-        return res.status(200).json({ success: true });
-    } catch (error) {
-        return res.status(500).json({ error: error.message });
+    if (emailError) {
+      console.error("LỖI TỪ RESEND:", emailError);
+      throw new Error(emailError.message);
     }
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 }

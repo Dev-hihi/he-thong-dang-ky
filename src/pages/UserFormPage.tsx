@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle2, Phone, User, Hash, MapPin, FileText, Send, Calendar } from 'lucide-react';
+import { CheckCircle2, Phone, User, Hash, MapPin, FileText, Send, Calendar, Banknote } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 
 // --- TỪ ĐIỂN LỊCH XỔ SỐ ---
@@ -18,32 +18,33 @@ export default function UserFormPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Lấy thứ mấy của ngày hôm nay
   const todayIndex = new Date().getDay();
   const currentSchedule = LOTTERY_SCHEDULE[todayIndex];
 
+  // NÂNG CẤP 1: stations chuyển thành MẢNG (để chọn nhiều) và thêm amount
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
     numbers: '',
+    amount: '', // Ô nhập số tiền
     region: 'Miền Bắc',
-    station: currentSchedule['Bac'][0], // Đài mặc định ban đầu
+    stations: [currentSchedule['Bac'][0]], // Mặc định chọn đài đầu tiên
     note: ''
   });
 
-  // Tự động đổi đài khi khách bấm chọn Miền khác
+  // Tự động reset đài khi đổi Miền
   useEffect(() => {
     const regionKey = formData.region === 'Miền Bắc' ? 'Bac' : formData.region === 'Miền Trung' ? 'Trung' : 'Nam';
     const stationsForToday = currentSchedule[regionKey];
     if (stationsForToday && stationsForToday.length > 0) {
-      setFormData(prev => ({ ...prev, station: stationsForToday[0] }));
+      setFormData(prev => ({ ...prev, stations: [stationsForToday[0]] })); // Reset về chọn 1 đài mặc định
     }
   }, [formData.region]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.phone || !formData.numbers || !formData.station) {
-      alert('Vui lòng điền đầy đủ thông tin và chọn đài!');
+    if (!formData.fullName || !formData.phone || !formData.numbers || formData.stations.length === 0 || !formData.amount) {
+      alert('Vui lòng điền đầy đủ thông tin và chọn ít nhất 1 đài!');
       return;
     }
     setIsLoading(true);
@@ -55,8 +56,9 @@ export default function UserFormPage() {
           full_name: formData.fullName,
           phone_zalo: formData.phone,
           numbers: formData.numbers,
+          amount: formData.amount, // Gửi số tiền
           region: formData.region.replace('Miền ', ''),
-          station: formData.station, // Gửi tên đài lên mạng
+          station: formData.stations.join(', '), // Nối các đài thành chữ (VD: "TP.HCM, Long An")
           note: formData.note
         }),
       });
@@ -68,8 +70,9 @@ export default function UserFormPage() {
           fullName: '',
           phone: '',
           numbers: '',
+          amount: '',
           region: 'Miền Bắc',
-          station: currentSchedule['Bac'][0],
+          stations: [currentSchedule['Bac'][0]],
           note: ''
         });
       } else {
@@ -80,6 +83,25 @@ export default function UserFormPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // NÂNG CẤP 2: Hàm xử lý chọn nhiều đài
+  const handleStationToggle = (stationName: string) => {
+    setFormData(prev => {
+      const isSelected = prev.stations.includes(stationName);
+      if (isSelected) {
+        return { ...prev, stations: prev.stations.filter(s => s !== stationName) }; // Bỏ chọn
+      } else {
+        return { ...prev, stations: [...prev.stations, stationName] }; // Chọn thêm
+      }
+    });
+  };
+
+  // NÂNG CẤP 3: Hàm tự động phẩy số tiền
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, ''); // Bỏ hết chữ
+    const formattedValue = rawValue ? new Intl.NumberFormat('en-US').format(Number(rawValue)) : '';
+    setFormData({ ...formData, amount: formattedValue });
   };
 
   return (
@@ -102,17 +124,28 @@ export default function UserFormPage() {
               <input type="tel" required pattern="[0-9]*" placeholder="Ví dụ: 0901234567" className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none text-gray-900 placeholder:text-gray-400" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })} />
             </div>
 
-            {/* ĐÃ NÂNG CẤP: CHỈ CHO NHẬP SỐ */}
+            {/* ĐÃ FIX: Cho phép số VÀ DẤU PHẨY */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2"><Hash size={14} className="text-blue-600" />Số lượng đăng ký</label>
               <input
-                type="tel"
-                pattern="[0-9]*"
+                type="text"
                 required
                 placeholder="Ví dụ: 10, 25, 45"
                 className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none text-gray-900 placeholder:text-gray-400"
                 value={formData.numbers}
-                onChange={(e) => setFormData({ ...formData, numbers: e.target.value.replace(/\D/g, '') })}
+                onChange={(e) => setFormData({ ...formData, numbers: e.target.value.replace(/[^0-9, ]/g, '') })}
+              />
+            </div>
+
+            {/* MỚI: Ô nhập số tiền */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2"><Banknote size={14} className="text-blue-600" />Số tiền (VNĐ)</label>
+              <input
+                type="text"
+                required
+                placeholder="Ví dụ: 10,000"
+                className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none placeholder:text-gray-400 font-bold text-blue-700" value={formData.amount}
+                onChange={handleAmountChange}
               />
             </div>
 
@@ -125,18 +158,27 @@ export default function UserFormPage() {
               </div>
             </div>
 
-            {/* --- KHU VỰC CHỌN ĐÀI XỔ SỐ --- */}
+            {/* ĐÃ FIX: Hỗ trợ chọn NHIỀU ĐÀI cùng lúc */}
             <div className="space-y-2 mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
               <p className="text-sm font-semibold text-blue-800 flex items-center gap-2">
                 <Calendar size={16} /> Hôm nay ({currentSchedule.dayName}). Chọn đài:
               </p>
               <div className="flex flex-wrap gap-2">
-                {currentSchedule[formData.region === 'Miền Bắc' ? 'Bac' : formData.region === 'Miền Trung' ? 'Trung' : 'Nam'].map((stationName) => (
-                  <label key={stationName} className={`cursor-pointer px-4 py-2 rounded-md border text-sm font-medium transition-all ${formData.station === stationName ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-100'}`}>
-                    <input type="radio" name="station" value={stationName} className="hidden" onChange={(e) => setFormData({ ...formData, station: e.target.value })} />
-                    {stationName}
-                  </label>
-                ))}
+                {currentSchedule[formData.region === 'Miền Bắc' ? 'Bac' : formData.region === 'Miền Trung' ? 'Trung' : 'Nam'].map((stationName) => {
+                  const isChecked = formData.stations.includes(stationName);
+                  return (
+                    <label key={stationName} className={`cursor-pointer px-4 py-2 rounded-md border text-sm font-medium transition-all ${isChecked ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-100'}`}>
+                      <input
+                        type="checkbox"
+                        value={stationName}
+                        className="hidden"
+                        checked={isChecked}
+                        onChange={() => handleStationToggle(stationName)}
+                      />
+                      {stationName}
+                    </label>
+                  );
+                })}
               </div>
             </div>
 
